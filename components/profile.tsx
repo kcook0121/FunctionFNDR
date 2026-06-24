@@ -2,19 +2,19 @@
 
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
-import { CheckCircle2, Edit3, Sparkles, X } from 'lucide-react'
-import { currentUser } from '@/lib/data'
+import { CheckCircle2, Edit3, LogOut, Sparkles, X } from 'lucide-react'
+import { useAuth } from '@/lib/auth/auth-context'
 import { cn } from '@/lib/utils'
 
 export function ProfileSummary() {
+  const { profile, saveBio, signOut } = useAuth()
   const [open, setOpen] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [profile, setProfile] = useState(currentUser)
   const [toast, setToast] = useState<string | null>(null)
-  const [draftBio, setDraftBio] = useState(profile.bio)
+  const [draftBio, setDraftBio] = useState(profile?.bio ?? '')
 
   const tierBadge = useMemo(() => {
-    switch (profile.promoterTier) {
+    switch (profile?.promoterTier) {
       case 'Headliner':
         return 'Headliner'
       case 'Campus Rep':
@@ -24,12 +24,18 @@ export function ProfileSummary() {
       default:
         return 'Rookie'
     }
-  }, [profile.promoterTier])
+  }, [profile?.promoterTier])
 
-  function saveProfile() {
-    setProfile((current) => ({ ...current, bio: draftBio }))
-    setIsEditing(false)
-    setToast('Profile updated')
+  if (!profile) return null
+
+  async function saveProfile() {
+    const result = await saveBio(draftBio)
+    if (result.error) {
+      setToast(result.error)
+    } else {
+      setIsEditing(false)
+      setToast('Profile updated')
+    }
     window.setTimeout(() => setToast(null), 1600)
   }
 
@@ -37,11 +43,14 @@ export function ProfileSummary() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setDraftBio(profile.bio)
+          setOpen(true)
+        }}
         className="inline-flex items-center gap-3 rounded-full border border-border bg-card/90 px-3 py-2 text-sm font-semibold text-foreground transition hover:border-primary/60 hover:bg-card"
       >
         <span className="relative h-9 w-9 overflow-hidden rounded-full ring-1 ring-border">
-          <Image src={profile.avatar} alt={profile.name} fill className="object-cover" />
+          <Image src={profile.avatarUrl} alt={profile.name} fill className="object-cover" />
         </span>
         <span className="text-left leading-tight">
           <span className="block text-sm font-bold text-foreground">{profile.name}</span>
@@ -69,7 +78,7 @@ export function ProfileSummary() {
             <div className="space-y-5 px-5 py-4">
               <div className="flex items-center gap-4">
                 <div className="relative h-20 w-20 overflow-hidden rounded-3xl ring-1 ring-border">
-                  <Image src={profile.avatar} alt={profile.name} fill className="object-cover" />
+                  <Image src={profile.avatarUrl} alt={profile.name} fill className="object-cover" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -144,6 +153,17 @@ export function ProfileSummary() {
                   ))}
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className={cn(
+                  'inline-flex w-full items-center justify-center gap-2 rounded-full border border-border bg-background px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:border-destructive/50 hover:text-destructive',
+                )}
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </button>
             </div>
           </div>
           {toast && (

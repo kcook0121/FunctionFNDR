@@ -344,7 +344,7 @@ export function VibeMap() {
       </div>
 
       {/* Grouped floating control buttons — right-side (moved lower to avoid overlap) */}
-      <div className="absolute right-4 top-36 sm:top-20 z-50 flex flex-col gap-3">
+      <div className="absolute right-5 top-[132px] z-50 flex flex-col gap-3">
         <button className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card/80 text-foreground backdrop-blur transition active:scale-90">
           <Layers className="h-[18px] w-[18px]" />
         </button>
@@ -357,7 +357,7 @@ export function VibeMap() {
       </div>
 
       {/* Floating translucent search bar */}
-      <div className="absolute inset-x-4 top-[88px] z-20 pr-16">
+      <div className="absolute left-4 right-24 top-[132px] z-20">
         <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/70 px-3.5 py-3 backdrop-blur-md">
           <Search className="h-4.5 w-4.5 text-muted-foreground" />
           <input
@@ -368,7 +368,7 @@ export function VibeMap() {
         </div>
       </div>
 
-      <div className="absolute inset-x-4 top-[146px] z-20 pr-16">
+      <div className="absolute left-4 right-24 top-[205px] z-20">
         <div className="flex flex-wrap items-center gap-2">
           {filterOptions.map((filter) => {
             const active = activeFilters.includes(filter)
@@ -392,7 +392,7 @@ export function VibeMap() {
       </div>
 
       {/* Zoom controls and filter summary (moved down on mobile to avoid header overlap) */}
-      <div className="absolute right-4 top-28 sm:top-4 z-30 flex flex-col items-end gap-3">
+      <div className="absolute right-5 top-[310px] z-30 flex flex-col items-center gap-3">
         <div className="rounded-3xl border border-border bg-card/80 p-3 backdrop-blur-md">
           <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Live Vibe</p>
           <p className="mt-1 text-sm font-semibold text-foreground">{filteredPins.length} spots</p>

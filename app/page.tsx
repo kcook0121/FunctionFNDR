@@ -5,7 +5,7 @@ import { BottomNav, type Tab } from '@/components/bottom-nav'
 import { ProfileSummary } from '@/components/profile'
 import { VibeMap } from '@/components/vibe-map'
 import { TicketGate } from '@/components/ticket-gate'
-import { Soundstage } from '@/components/soundstage'
+import { Soundstage } from '../components/soundstage'
 import { Earn } from '@/components/earn'
 
 export default function Page() {

@@ -1,17 +1,40 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
-import { CheckCircle2, Edit3, LogOut, Sparkles, X } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Edit3, Loader2, LogOut, Sparkles, X } from 'lucide-react'
 import { useAuth } from '@/lib/auth/auth-context'
+import { getMyEvents, type EventRecord, type MyEventsGroups } from '@/lib/events/event-service'
 import { cn } from '@/lib/utils'
 
-export function ProfileSummary() {
-  const { profile, saveBio, signOut } = useAuth()
+const EMPTY_MY_EVENTS: MyEventsGroups = {
+  created: [],
+  saved: [],
+  going: [],
+  interested: [],
+}
+
+type ProfileSummaryProps = {
+  onOpenEvent?: (eventId: string) => void
+}
+
+function formatEventDateTime(dateTime: string) {
+  const date = new Date(dateTime)
+  return {
+    date: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+    time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+  }
+}
+
+export function ProfileSummary({ onOpenEvent }: ProfileSummaryProps) {
+  const { user, profile, saveBio, signOut } = useAuth()
   const [open, setOpen] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [draftBio, setDraftBio] = useState(profile?.bio ?? '')
+  const [myEvents, setMyEvents] = useState<MyEventsGroups>(EMPTY_MY_EVENTS)
+  const [myEventsSource, setMyEventsSource] = useState<'supabase' | 'mock'>('mock')
+  const [loadingMyEvents, setLoadingMyEvents] = useState(false)
 
   const tierBadge = useMemo(() => {
     switch (profile?.promoterTier) {
@@ -26,6 +49,27 @@ export function ProfileSummary() {
     }
   }, [profile?.promoterTier])
 
+  useEffect(() => {
+    if (!open || !user) return
+
+    let mounted = true
+    setLoadingMyEvents(true)
+
+    getMyEvents(user.id)
+      .then((result) => {
+        if (!mounted) return
+        setMyEvents(result.groups)
+        setMyEventsSource(result.source)
+      })
+      .finally(() => {
+        if (mounted) setLoadingMyEvents(false)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [open, user])
+
   if (!profile) return null
 
   async function saveProfile() {
@@ -38,6 +82,38 @@ export function ProfileSummary() {
     }
     window.setTimeout(() => setToast(null), 1600)
   }
+
+  function handleOpenEvent(eventId: string) {
+    setOpen(false)
+    onOpenEvent?.(eventId)
+  }
+
+  const myEventSections = [
+    {
+      key: 'created',
+      title: 'Created Events',
+      events: myEvents.created,
+      emptyMessage: 'No created events yet. Publish one from the Create tab.',
+    },
+    {
+      key: 'saved',
+      title: 'Saved Events',
+      events: myEvents.saved,
+      emptyMessage: 'No saved events yet. Bookmark events from Tickets.',
+    },
+    {
+      key: 'going',
+      title: 'Going',
+      events: myEvents.going,
+      emptyMessage: 'No going RSVPs yet. Mark yourself as going from Tickets.',
+    },
+    {
+      key: 'interested',
+      title: 'Interested',
+      events: myEvents.interested,
+      emptyMessage: 'No interested RSVPs yet. Tap Maybe on an event in Tickets.',
+    },
+  ] as const
 
   return (
     <>
@@ -131,16 +207,40 @@ export function ProfileSummary() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
-                  { label: 'Saved', value: profile.savedEvents.length },
-                  { label: 'Attended', value: profile.attendedEvents.length },
-                  { label: 'Promoter Score', value: profile.promoterTier },
-                  { label: 'Referrals', value: `${profile.referrals}` },
+                  { label: 'Created', value: myEvents.created.length },
+                  { label: 'Saved', value: myEvents.saved.length },
+                  { label: 'Going', value: myEvents.going.length },
+                  { label: 'Interested', value: myEvents.interested.length },
                 ].map((metric) => (
                   <div key={metric.label} className="rounded-3xl border border-border bg-background p-4">
                     <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">{metric.label}</p>
                     <p className="mt-2 text-xl font-extrabold text-foreground">{metric.value}</p>
                   </div>
                 ))}
+              </div>
+
+              <div className="rounded-3xl border border-border bg-card p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">My Events</p>
+                  {loadingMyEvents && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                </div>
+                {myEventsSource === 'mock' && !loadingMyEvents && (
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Showing sample data until Supabase my-events queries are configured.
+                  </p>
+                )}
+
+                <div className="mt-4 space-y-4">
+                  {myEventSections.map((section) => (
+                    <MyEventsSection
+                      key={section.key}
+                      title={section.title}
+                      events={section.events}
+                      emptyMessage={section.emptyMessage}
+                      onOpenEvent={handleOpenEvent}
+                    />
+                  ))}
+                </div>
               </div>
 
               <div className="rounded-3xl border border-border bg-card p-4">
@@ -152,6 +252,18 @@ export function ProfileSummary() {
                     </span>
                   ))}
                 </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { label: 'Promoter Score', value: profile.promoterTier },
+                  { label: 'Referrals', value: `${profile.referrals}` },
+                ].map((metric) => (
+                  <div key={metric.label} className="rounded-3xl border border-border bg-background p-4">
+                    <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">{metric.label}</p>
+                    <p className="mt-2 text-xl font-extrabold text-foreground">{metric.value}</p>
+                  </div>
+                ))}
               </div>
 
               <button
@@ -174,5 +286,54 @@ export function ProfileSummary() {
         </div>
       )}
     </>
+  )
+}
+
+function MyEventsSection({
+  title,
+  events,
+  emptyMessage,
+  onOpenEvent,
+}: {
+  title: string
+  events: EventRecord[]
+  emptyMessage: string
+  onOpenEvent: (eventId: string) => void
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-background p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">{title}</p>
+      {events.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">{emptyMessage}</p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {events.map((event) => {
+            const { date, time } = formatEventDateTime(event.date_time)
+            return (
+              <button
+                key={event.id}
+                type="button"
+                onClick={() => onOpenEvent(event.id)}
+                className="flex w-full items-start gap-3 rounded-2xl border border-border bg-card px-3 py-3 text-left transition hover:border-primary/50"
+              >
+                <span className="relative mt-0.5 h-12 w-12 shrink-0 overflow-hidden rounded-xl ring-1 ring-border">
+                  <Image src={event.image ?? '/event-1.png'} alt={event.title} fill className="object-cover" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-bold text-foreground">{event.title}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {event.host_name} · {event.venue_type}
+                  </span>
+                  <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {date} · {time}
+                  </span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }

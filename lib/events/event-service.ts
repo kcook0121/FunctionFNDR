@@ -43,6 +43,13 @@ export type UserEventEngagement = {
   attendedEventIds: string[]
 }
 
+export type MyEventsGroups = {
+  created: EventRecord[]
+  saved: EventRecord[]
+  going: EventRecord[]
+  interested: EventRecord[]
+}
+
 type EventRow = {
   id: string
   title: string
@@ -264,4 +271,107 @@ export async function createEvent(
 
   if (error) throw error
   return mapEventRow(data as EventRow)
+}
+
+function mapJoinedEvents(rows: Array<{ events: EventRow | EventRow[] | null }>): EventRecord[] {
+  return rows
+    .map((row) => {
+      const event = Array.isArray(row.events) ? row.events[0] : row.events
+      return event ? mapEventRow(event) : null
+    })
+    .filter((event): event is EventRecord => event !== null)
+}
+
+async function getCreatedEvents(userId: string): Promise<EventRecord[]> {
+  const { data, error } = await supabase
+    .from('events')
+    .select(EVENT_SELECT_FIELDS)
+    .eq('host_id', userId)
+    .order('date_time', { ascending: true })
+
+  if (error) throw error
+  return (data as EventRow[]).map(mapEventRow)
+}
+
+async function getSavedEventsForUser(userId: string): Promise<EventRecord[]> {
+  const { data, error } = await supabase
+    .from('saved_events')
+    .select(`created_at, events (${EVENT_SELECT_FIELDS})`)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return mapJoinedEvents((data ?? []) as Array<{ events: EventRow | EventRow[] | null }>)
+}
+
+async function getRsvpEventsForUser(userId: string, status: RsvpStatus): Promise<EventRecord[]> {
+  const { data, error } = await supabase
+    .from('event_rsvps')
+    .select(`updated_at, events (${EVENT_SELECT_FIELDS})`)
+    .eq('user_id', userId)
+    .eq('status', status)
+    .order('updated_at', { ascending: false })
+
+  if (error) throw error
+  return mapJoinedEvents((data ?? []) as Array<{ events: EventRow | EventRow[] | null }>)
+}
+
+function buildMockMyEvents(
+  userId: string,
+  engagement: UserEventEngagement,
+): MyEventsGroups {
+  const eventsById = new Map(MOCK_EVENTS.map((event) => [event.id, event]))
+  const pick = (ids: string[]) =>
+    ids
+      .map((id) => eventsById.get(id))
+      .filter((event): event is EventRecord => Boolean(event))
+
+  const goingIds = Object.entries(engagement.rsvps)
+    .filter(([, status]) => status === 'yes')
+    .map(([eventId]) => eventId)
+  const interestedIds = Object.entries(engagement.rsvps)
+    .filter(([, status]) => status === 'maybe')
+    .map(([eventId]) => eventId)
+
+  return {
+    created: MOCK_EVENTS.filter((event) => event.host_id === userId),
+    saved: pick(engagement.savedEventIds),
+    going: pick(goingIds),
+    interested: pick(interestedIds),
+  }
+}
+
+export async function getMyEvents(
+  userId: string,
+): Promise<{ groups: MyEventsGroups; source: 'supabase' | 'mock' }> {
+  try {
+    const [created, saved, going, interested] = await Promise.all([
+      getCreatedEvents(userId),
+      getSavedEventsForUser(userId),
+      getRsvpEventsForUser(userId, 'yes'),
+      getRsvpEventsForUser(userId, 'maybe'),
+    ])
+
+    return {
+      groups: { created, saved, going, interested },
+      source: 'supabase',
+    }
+  } catch {
+    let engagement: UserEventEngagement = {
+      savedEventIds: [],
+      rsvps: {},
+      attendedEventIds: [],
+    }
+
+    try {
+      engagement = await getUserEventEngagement(userId)
+    } catch {
+      // Use empty engagement when Supabase is unavailable.
+    }
+
+    return {
+      groups: buildMockMyEvents(userId, engagement),
+      source: 'mock',
+    }
+  }
 }

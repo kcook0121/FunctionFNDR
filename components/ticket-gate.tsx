@@ -35,7 +35,15 @@ const RSVP_OPTIONS = [
   { status: 'no' as const, label: 'Not going' },
 ]
 
-export function TicketGate({ refreshKey = 0 }: { refreshKey?: number }) {
+export function TicketGate({
+  refreshKey = 0,
+  openEventId = null,
+  onOpenEventHandled,
+}: {
+  refreshKey?: number
+  openEventId?: string | null
+  onOpenEventHandled?: () => void
+}) {
   const { savedEventIds, rsvps, saveEvent, unsaveEvent, setRsvp } = useAuth()
   const [events, setEvents] = useState<VenueEvent[]>([])
   const [eventsSource, setEventsSource] = useState<'supabase' | 'mock'>('mock')
@@ -67,6 +75,22 @@ export function TicketGate({ refreshKey = 0 }: { refreshKey?: number }) {
 
     loadEvents()
   }, [showToast, refreshKey])
+
+  useEffect(() => {
+    if (!openEventId || isLoadingEvents) return
+
+    const eventExists = events.some((event) => event.id === openEventId)
+    if (eventExists) {
+      openDrawer(openEventId)
+      onOpenEventHandled?.()
+      return
+    }
+
+    if (events.length > 0) {
+      showToast('Event not found in the current lineup')
+      onOpenEventHandled?.()
+    }
+  }, [openEventId, events, isLoadingEvents, onOpenEventHandled, showToast])
 
   const displayEvents = events.length > 0 ? events : []
   const selectedEvent = useMemo(

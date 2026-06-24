@@ -13,9 +13,15 @@ import { Earn } from '@/components/earn'
 export default function Page() {
   const [tab, setTab] = useState<Tab>('map')
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0)
+  const [openTicketEventId, setOpenTicketEventId] = useState<string | null>(null)
 
   function handleEventCreated() {
     setEventsRefreshKey((current) => current + 1)
+    setTab('gate')
+  }
+
+  function handleOpenEvent(eventId: string) {
+    setOpenTicketEventId(eventId)
     setTab('gate')
   }
 
@@ -26,10 +32,16 @@ export default function Page() {
         <div className="relative h-full w-full overflow-hidden sm:rounded-[44px]">
           <AuthGate>
             <div className="absolute right-4 top-4 z-30">
-              <ProfileSummary />
+              <ProfileSummary onOpenEvent={handleOpenEvent} />
             </div>
             {tab === 'map' && <VibeMap />}
-            {tab === 'gate' && <TicketGate refreshKey={eventsRefreshKey} />}
+            {tab === 'gate' && (
+              <TicketGate
+                refreshKey={eventsRefreshKey}
+                openEventId={openTicketEventId}
+                onOpenEventHandled={() => setOpenTicketEventId(null)}
+              />
+            )}
             {tab === 'create' && <CreateEvent onCreated={handleEventCreated} />}
             {tab === 'sound' && <Soundstage />}
             {tab === 'earn' && <Earn />}

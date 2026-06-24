@@ -344,7 +344,7 @@ export function VibeMap() {
       </div>
 
       {/* Grouped floating control buttons — right-side (moved lower to avoid overlap) */}
-      <div className="absolute right-5 top-[132px] z-50 flex flex-col gap-3">
+      <div className="absolute right-5 top-[132px] z-10 flex flex-col gap-3">
         <button className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card/80 text-foreground backdrop-blur transition active:scale-90">
           <Layers className="h-[18px] w-[18px]" />
         </button>
@@ -392,7 +392,7 @@ export function VibeMap() {
       </div>
 
       {/* Zoom controls and filter summary (moved down on mobile to avoid header overlap) */}
-      <div className="absolute right-5 top-[310px] z-30 flex flex-col items-center gap-3">
+      <div className="absolute right-5 top-[310px] z-10 flex flex-col items-center gap-3">
         <div className="rounded-3xl border border-border bg-card/80 p-3 backdrop-blur-md">
           <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Live Vibe</p>
           <p className="mt-1 text-sm font-semibold text-foreground">{filteredPins.length} spots</p>

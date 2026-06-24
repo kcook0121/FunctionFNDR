@@ -3,12 +3,18 @@
 create table if not exists public.events (
   id text primary key,
   title text not null,
+  host_id uuid references auth.users (id) on delete set null,
   host_name text not null,
+  university text,
   venue_type text not null,
+  address text,
   ticket_price_ga integer not null default 0,
   ticket_price_vip integer not null default 0,
   theme_tag text,
+  music_genre text,
   date_time timestamptz not null,
+  end_time timestamptz,
+  capacity integer,
   image text,
   detail text,
   location text,
@@ -39,6 +45,19 @@ create policy "Events are readable by authenticated users"
   for select
   to authenticated
   using (true);
+
+create policy "Events are insertable by authenticated hosts"
+  on public.events
+  for insert
+  to authenticated
+  with check (auth.uid() = host_id);
+
+create policy "Events are updatable by host"
+  on public.events
+  for update
+  to authenticated
+  using (auth.uid() = host_id)
+  with check (auth.uid() = host_id);
 
 create policy "Saved events are readable by owner"
   on public.saved_events

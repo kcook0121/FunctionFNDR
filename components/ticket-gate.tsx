@@ -35,7 +35,7 @@ const RSVP_OPTIONS = [
   { status: 'no' as const, label: 'Not going' },
 ]
 
-export function TicketGate() {
+export function TicketGate({ refreshKey = 0 }: { refreshKey?: number }) {
   const { savedEventIds, rsvps, saveEvent, unsaveEvent, setRsvp } = useAuth()
   const [events, setEvents] = useState<VenueEvent[]>([])
   const [eventsSource, setEventsSource] = useState<'supabase' | 'mock'>('mock')
@@ -66,7 +66,7 @@ export function TicketGate() {
     }
 
     loadEvents()
-  }, [showToast])
+  }, [showToast, refreshKey])
 
   const displayEvents = events.length > 0 ? events : []
   const selectedEvent = useMemo(

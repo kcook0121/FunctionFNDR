@@ -5,15 +5,36 @@ export type RsvpStatus = 'yes' | 'maybe' | 'no'
 export type EventRecord = {
   id: string
   title: string
+  host_id?: string
   host_name: string
+  university?: string
   venue_type: string
+  address?: string
   ticket_price_ga: number
   ticket_price_vip: number
   theme_tag: string
+  music_genre?: string
   date_time: string
+  end_time?: string
+  capacity?: number
   image?: string
   detail?: string
   location?: string
+}
+
+export type CreateEventInput = {
+  title: string
+  university: string
+  venue: string
+  address: string
+  date: string
+  startTime: string
+  endTime: string
+  coverPrice: number
+  capacity: number
+  musicGenre: string
+  description: string
+  imageUrl?: string
 }
 
 export type UserEventEngagement = {
@@ -25,12 +46,18 @@ export type UserEventEngagement = {
 type EventRow = {
   id: string
   title: string
+  host_id: string | null
   host_name: string
+  university: string | null
   venue_type: string
+  address: string | null
   ticket_price_ga: number
   ticket_price_vip: number
   theme_tag: string | null
+  music_genre: string | null
   date_time: string
+  end_time: string | null
+  capacity: number | null
   image: string | null
   detail: string | null
   location: string | null
@@ -82,23 +109,41 @@ function mapEventRow(row: EventRow): EventRecord {
   return {
     id: row.id,
     title: row.title,
+    host_id: row.host_id ?? undefined,
     host_name: row.host_name,
+    university: row.university ?? undefined,
     venue_type: row.venue_type,
+    address: row.address ?? row.location ?? undefined,
     ticket_price_ga: row.ticket_price_ga,
     ticket_price_vip: row.ticket_price_vip,
-    theme_tag: row.theme_tag ?? '',
+    theme_tag: row.theme_tag ?? row.music_genre ?? '',
+    music_genre: row.music_genre ?? row.theme_tag ?? undefined,
     date_time: row.date_time,
+    end_time: row.end_time ?? undefined,
+    capacity: row.capacity ?? undefined,
     image: row.image ?? undefined,
     detail: row.detail ?? undefined,
-    location: row.location ?? undefined,
+    location: row.location ?? row.address ?? undefined,
   }
 }
+
+function generateEventId(): string {
+  const suffix = Math.random().toString(36).slice(2, 8)
+  return `e_${Date.now()}_${suffix}`
+}
+
+function combineDateAndTime(date: string, time: string): string {
+  return new Date(`${date}T${time}`).toISOString()
+}
+
+const EVENT_SELECT_FIELDS =
+  'id,title,host_id,host_name,university,venue_type,address,ticket_price_ga,ticket_price_vip,theme_tag,music_genre,date_time,end_time,capacity,image,detail,location'
 
 export async function getEvents(): Promise<{ events: EventRecord[]; source: 'supabase' | 'mock' }> {
   try {
     const { data, error } = await supabase
       .from('events')
-      .select('id,title,host_name,venue_type,ticket_price_ga,ticket_price_vip,theme_tag,date_time,image,detail,location')
+      .select(EVENT_SELECT_FIELDS)
       .order('date_time', { ascending: true })
 
     if (error || !data?.length) {
@@ -179,4 +224,44 @@ export async function setRsvp(
     )
 
   if (error) throw error
+}
+
+export async function createEvent(
+  userId: string,
+  hostName: string,
+  input: CreateEventInput,
+): Promise<EventRecord> {
+  const id = generateEventId()
+  const dateTime = combineDateAndTime(input.date, input.startTime)
+  const endTime = combineDateAndTime(input.date, input.endTime)
+  const vipPrice = Math.max(input.coverPrice * 3, input.coverPrice + 10)
+
+  const payload = {
+    id,
+    title: input.title.trim(),
+    host_id: userId,
+    host_name: hostName.trim() || 'Campus Host',
+    university: input.university.trim(),
+    venue_type: input.venue.trim(),
+    address: input.address.trim(),
+    location: input.address.trim(),
+    ticket_price_ga: input.coverPrice,
+    ticket_price_vip: vipPrice,
+    theme_tag: input.musicGenre.trim(),
+    music_genre: input.musicGenre.trim(),
+    date_time: dateTime,
+    end_time: endTime,
+    capacity: input.capacity,
+    image: input.imageUrl?.trim() || '/event-1.png',
+    detail: input.description.trim(),
+  }
+
+  const { data, error } = await supabase
+    .from('events')
+    .insert(payload)
+    .select(EVENT_SELECT_FIELDS)
+    .single()
+
+  if (error) throw error
+  return mapEventRow(data as EventRow)
 }

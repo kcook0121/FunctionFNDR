@@ -1,8 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Normalize: treat both `undefined` and empty strings as "not configured".
+const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = rawUrl && rawUrl.length > 0 ? rawUrl : undefined
+const supabaseAnonKey = rawKey && rawKey.length > 0 ? rawKey : undefined
 
 // Single source of truth for "do we have a real backend?".
 // The whole app branches on this flag so the demo never throws.

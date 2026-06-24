@@ -1,13 +1,14 @@
 'use client'
 
-import { MapPinned, Ticket, Disc3, Wallet } from 'lucide-react'
+import { MapPinned, Ticket, Disc3, Wallet, CalendarPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type Tab = 'map' | 'gate' | 'sound' | 'earn'
+export type Tab = 'map' | 'gate' | 'create' | 'sound' | 'earn'
 
 const items: { id: Tab; label: string; icon: typeof MapPinned }[] = [
   { id: 'map', label: 'VibeMap', icon: MapPinned },
   { id: 'gate', label: 'Tickets', icon: Ticket },
+  { id: 'create', label: 'Create', icon: CalendarPlus },
   { id: 'sound', label: 'Soundstage', icon: Disc3 },
   { id: 'earn', label: 'Earn', icon: Wallet },
 ]

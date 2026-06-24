@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { AuthGate } from '@/components/auth/auth-gate'
 import { BottomNav, type Tab } from '@/components/bottom-nav'
+import { CreateEvent } from '@/components/create-event'
 import { ProfileSummary } from '@/components/profile'
 import { VibeMap } from '@/components/vibe-map'
 import { TicketGate } from '@/components/ticket-gate'
@@ -11,6 +12,12 @@ import { Earn } from '@/components/earn'
 
 export default function Page() {
   const [tab, setTab] = useState<Tab>('map')
+  const [eventsRefreshKey, setEventsRefreshKey] = useState(0)
+
+  function handleEventCreated() {
+    setEventsRefreshKey((current) => current + 1)
+    setTab('gate')
+  }
 
   return (
     <main className="flex min-h-screen w-full items-center justify-center bg-background p-0 sm:p-6">
@@ -22,7 +29,8 @@ export default function Page() {
               <ProfileSummary />
             </div>
             {tab === 'map' && <VibeMap />}
-            {tab === 'gate' && <TicketGate />}
+            {tab === 'gate' && <TicketGate refreshKey={eventsRefreshKey} />}
+            {tab === 'create' && <CreateEvent onCreated={handleEventCreated} />}
             {tab === 'sound' && <Soundstage />}
             {tab === 'earn' && <Earn />}
             <BottomNav active={tab} onChange={setTab} />
